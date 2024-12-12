@@ -10,6 +10,11 @@ def checkSyntax(source, feedback):
     module = grammar.parse(source)
     errors = grammar.iter_errors(module)
 
+    if len(list(errors)) == 0:
+        return True
+
+    feedback.write("Syntax Errors:\n\n")
+
     for error in errors:
         lineNum = error.start_pos[0]
         line = source.split("\n")[lineNum - 1]
@@ -35,10 +40,10 @@ def parseCode(source, allowedImports=[]):
             for alias in node.names:
                 if alias.name not in allowedImports:
                     raise ImportError(
-                        f"Importing {alias.name} is not allowed.")
+                        f"Attempted to import {alias.name}")
         elif isinstance(node, ast.ImportFrom):
             if node.module not in allowedImports:
-                raise ImportError(f"Importing {node.module} is not allowed.")
+                raise ImportError(f"Attempted to import {node.module}")
     parsed_ast.body = new_body
 
     return parsed_ast
@@ -58,6 +63,15 @@ def checkFunctionCall(parsed_ast, caller, callee):
         if isinstance(node, ast.FunctionDef) and node.name == caller:
             for innerNode in ast.walk(node):
                 if isinstance(innerNode, ast.Call) and isinstance(innerNode.func, ast.Name) and innerNode.func.id == callee:
+                    return True
+    return False
+
+def checkFunctionReturn(parsed_ast, fnName):
+    # Check if the function has a return statement
+    for node in parsed_ast.body:
+        if isinstance(node, ast.FunctionDef) and node.name == fnName:
+            for innerNode in ast.walk(node):
+                if isinstance(innerNode, ast.Return):
                     return True
     return False
 
